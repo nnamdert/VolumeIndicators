@@ -1,0 +1,88 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © nnamdert
+//07/13/2023
+//@version=5
+indicator("Volume by nnamdert", overlay = true, format = format.inherit)
+plot_overall_volume = input.bool(false, title = 'Plot Overall Volume')
+Overall_Volume_Lookback = input.int(26, title = 'Overall Volume Lookback Period)')
+volu = volume
+atr_ = ta.atr(5)
+//plot(atr_, color = color.fuchsia)
+green_candle = open < close
+red_candle = open > close
+vol = volu > volu[1]
+ave_overall_volume = math.avg(volume, volume) 
+ave_overall_atr = math.avg(ta.atr(10), ta.atr(8))
+//plot(ave_overall_atr, color = color.new(color.lime, 0))
+high_overall_atr = atr_ > ave_overall_atr
+ave_volume_long = ta.sma(volume, 200)
+ave_volume_medium = ta.sma(volume, 50)
+ave_volume_short = ta.sma(volume, 20)
+smoothed_overall_volume = ta.sma(ave_overall_volume, Overall_Volume_Lookback)
+//volumeRatio = volume / ta.ema(volume, emaPeriod)
+Bear_Volume = red_candle //and red_candle[1] //and vol//and red_candle[2]
+Bull_Volume = green_candle //and green_candle[1] //and vol //and green_candle[2]
+var float high_overall_volume = ((ave_overall_volume * 1) + ave_overall_volume) / 2
+unusual_volume =  volume > high_overall_volume 
+increasing_volume = volume > volume[1] and volume[1] > volume[2] and volume[2] > volume[3] 
+high_volume_detected_ = volume[1] > high_overall_volume and increasing_volume
+high_volume_spike_detected_ = volume[1] > high_overall_volume and volume > volume[1]
+unusual_volume_and_atr = high_overall_atr and unusual_volume //and barstate.isconfirmed
+unusual_volume_bearish = Bear_Volume and unusual_volume_and_atr //and barstate.isconfirmed
+unusual_volume_bullish = Bull_Volume and unusual_volume_and_atr //and barstate.isconfirmed
+Neutral_Volume = not Bear_Volume and not Bull_Volume
+//define contrations
+contraction = not unusual_volume_bullish and not unusual_volume_bearish
+incontraction = (ta.barssince(contraction) >= 3)
+confirmed_contraction = incontraction[2] and incontraction[1] and incontraction
+expansion = Neutral_Volume[3] and Neutral_Volume[2] and Neutral_Volume[1] and not Neutral_Volume
+//                                          TABLE                                                            //
+//===========================================================================================================//
+//Get User Inputs
+var string group_name_01 = 'Display Panel Settings' // easier to change 1 than 15 =)
+string new_panel_Y_position = input.string('bottom', 'Panel position', inline='11', options=['top', 'middle', 'bottom'], group=group_name_01)
+string new_panel_X_position = input.string('right', '', inline='11', options=['left', 'center', 'right'], group=group_name_01)
+color textColor = input.color(color.white, title = 'Text Color')
+color table_background = input.color(color.black, title = 'Table Background')
+color color_of_something_03 = input.color(color.black, title = 'Text Color of something 03')
+color color_of_something_04 = input.color(color.black, title = 'Text Color of something 04')
+bullish_color = (color.new(color.green, 0))
+bearish_color = (color.new(color.red, 0))
+volume_color = color.from_gradient(close[Overall_Volume_Lookback], low, high, bullish_color, bearish_color)
+bool bar_state = input.bool(true, title ='Realtime?') ? barstate.isrealtime : barstate.islast
+
+//Table
+some_value = close
+//table.new(position, columns, rows, bgcolor, frame_color, frame_width, border_color, border_width)
+var table new_panel = table.new(position = new_panel_Y_position + '_' + new_panel_X_position, columns = 2, rows = 2, bgcolor = color.new(table_background, 50), border_width = 1)
+if bar_state
+    table.cell(new_panel, 0, 0, 'Current\nVolume', bgcolor = color.new(table_background, 0), text_color = color.new(textColor, 0), width = 10, height = 6)
+    table.cell(new_panel, 0, 1, str.tostring( volume ), bgcolor = color.new(volume_color, 0), text_color = color.new(textColor, 0), width = 10, height = 6)
+    table.cell(new_panel, 1, 0, 'Average\nVolume', bgcolor = color.new(table_background, 0), text_color = color.new(textColor, 0), width = 10, height = 6)
+    table.cell(new_panel, 1, 1, str.tostring( smoothed_overall_volume ), bgcolor = color.new(volume_color, 0), text_color = color.new(textColor, 0), width = 10, height = 6)
+
+//plot(high_overall_volume)
+//plot(not Neutral_Volume ? na : volume , title = 'volume', color = color.black, linewidth = 1, style = plot.style_histogram)
+//plot(vol ? na : volume, title = 'Volume', color = color.blue, linewidth = 1, style = plot.style_histogram)
+//plot(not Bear_Volume ? na : volume, title = 'Bearish Volume', color = color.red, linewidth = 3, style = plot.style_histogram)
+//plot(not Bull_Volume ? na : volume, title = 'Bullish Volume', color = color.lime, linewidth = 3, style = plot.style_histogram)
+//plot(volu, color = color.yellow, style = plot.style_circles, linewidth = 1)
+//plot(ave_volume_long, color = color.red, style = plot.style_line, linewidth = 1)
+//plot(ave_volume_medium, color = color.gray, style = plot.style_line, linewidth = 1)
+//plot(ave_volume_short, color = color.blue, style = plot.style_line, linewidth = 1)
+//plot(ave_overall_volume, color = color.orange, style = plot.style_line, linewidth = 1)
+//plot(high_overall_volume, title = 'Unusuals Volume', color =color.blue, style = plot.style_circles, linewidth = 1)
+plotshape(unusual_volume_bearish, text = '\n 👨‍👩‍👦‍👦 \n', location = location.belowbar )
+plotshape(unusual_volume_bullish, text = '\n 👨‍👩‍👦‍👦 \n', location = location.abovebar )
+// Optional
+barcolor(unusual_volume_bearish ? color.new(#FF007F, 0) : na )
+barcolor(unusual_volume_bullish ? color.new(#39FF14, 0) : na )
+alertcondition(unusual_volume_bearish, title = 'Bearish Volume', message = 'Bearish Volume Detected')
+alertcondition(unusual_volume_bullish, title = 'Bullish Volume', message = 'Bullish Volume Detected')
+alertcondition(increasing_volume, title = 'Increased Volume', message = 'Increased Volume Detected')
+alertcondition(high_volume_detected_, title = 'Higher Volume', message = 'High Volume Detected')
+alertcondition(high_volume_spike_detected_ and not high_volume_spike_detected_[1], title = 'Unusual Volume', message = 'Unusual Volume Detected')
+alertcondition(confirmed_contraction, title = 'Contraction', message = 'Asset in Contraction')
+alertcondition(expansion, title = 'Expansion', message = 'Possible Expansion Detected')
+
+
